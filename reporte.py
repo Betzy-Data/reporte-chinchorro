@@ -3,34 +3,45 @@ import streamlit as st
 import pandas as pd
 import glob
 
-st.title("Reporte Artesanias La Guajira - FINAL FINAL")
-st.success("Codigo nuevo cargado!")
+st.set_page_config(page_title="Artesanias La Guajira", layout="wide")
+st.title("🧶 Reporte Artesanias La Guajira")
 
 archivo = glob.glob("*.xlsx")[0]
 df_raw = pd.read_excel(archivo, header=None)
 
-# Buscar donde esta Fecha o Producto, saltando vacios
 fila_header = 0
 for i in range(20):
-    fila_lista = df_raw.iloc[i].tolist()
-    # convertir todo a texto y quitar nulos
-    texto = " ".join([str(x) for x in fila_lista if str(x) != 'nan'])
+    texto = " ".join([str(x) for x in df_raw.iloc[i].tolist() if str(x) != 'nan'])
     if "Fecha" in texto or "Producto" in texto:
         fila_header = i
         break
-
-st.write(f"Encabezado encontrado en fila: {fila_header + 1}")
 
 df_raw.columns = df_raw.iloc[fila_header]
 df = df_raw.iloc[fila_header + 1:].reset_index(drop=True)
 df = df.dropna(how='all')
 
-st.write("Columnas finales:", list(df.columns))
-st.dataframe(df)
+# Limpiar tipos
+df['Fecha'] = pd.to_datetime(df['Fecha'])
+df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
+df['Cantidad'] = pd.to_numeric(df['Cantidad'], errors='coerce')
 
-if 'Total' in df.columns:
-    df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
-    st.metric("Ventas Totales", f"${df['Total'].sum():,.0f} COP")
-    st.metric("Numero de ventas", len(df))
-    if 'Producto' in df.columns:
-        st.bar_chart(df.groupby('Producto')['Total'].sum())
+# Filtros
+st.sidebar.header("Filtros")
+producto_filtro = st.sidebar.multiselect("Producto", df['Producto'].unique(), default=df['Producto'].unique())
+df_f = df[df['Producto'].isin(producto_filtro)]
+
+# Metricas
+c1, c2, c3 = st.columns(3)
+c1.metric("Ventas Totales", f"${df_f['Total'].sum():,.0f} COP")
+c2.metric("Total Pedidos", len(df_f))
+c3.metric("Ticket Promedio", f"${df_f['Total'].mean():,.0f} COP")
+
+# Tablas y graficos
+st.subheader("Detalle de ventas")
+st.dataframe(df_f, use_container_width=True)
+
+st.subheader("Ventas por producto")
+st.bar_chart(df_f.groupby('Producto')['Total'].sum())
+
+st.subheader("Ventas por ciudad")
+st.bar_chart(df_f.groupby('Ciudad')['Total'].sum())
