@@ -2,36 +2,33 @@ import streamlit as st
 import pandas as pd
 import glob
 
-st.title("Reporte artesanias La Guajira")
+st.title("Reporte Artesanias La Guajira")
 
 archivo = glob.glob("*.xlsx")[0]
 st.success(f"Archivo cargado: {archivo}")
 
-# Leemos sin titulos para buscar donde estan
-df_raw = pd.read_excel(archivo, header=None)
+# Leemos todo sin encabezado
+df_temp = pd.read_excel(archivo, header=None)
+df_temp = df_temp.dropna(how='all')
 
-# Buscar la fila que tiene "Producto" o "Total" o "Fecha"
-fila_titulo = 0
-for i in range(len(df_raw)):
-    fila_texto = str(df_raw.iloc[i].tolist()).lower()
-    if "producto" in fila_texto or "total" in fila_texto or "fecha" in fila_texto:
-        fila_titulo = i
-        break
+# La primera fila que tiene "Fecha" es el titulo
+# La ponemos como columnas
+df_temp.columns = df_temp.iloc[0]
+df = df_temp[1:].reset_index(drop=True)
 
-st.write(f"Titulos encontrados en fila: {fila_titulo + 1}")
-
-# Ahora leemos con esa fila como titulo
-df = pd.read_excel(archivo, header=fila_titulo)
-df = df.dropna(how='all') # quitar filas vacias
-
-st.write("Columnas:", list(df.columns))
+# Limpiar
+df = df.dropna(how='all')
+st.write("Columnas encontradas:")
+st.write(list(df.columns))
 st.dataframe(df)
 
-# Metricas
+# Ahora si calcula totales
 if 'Total' in df.columns:
-    total = pd.to_numeric(df['Total'], errors='coerce').sum()
-    st.metric("Ventas Totales", f"${total:,.0f} COP")
-    st.metric("Numero de ventas", len(df))
-    # Grafico por producto
+    df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
+    c1, c2 = st.columns(2)
+    c1.metric("Ventas Totales", f"${df['Total'].sum():,.0f} COP")
+    c2.metric("Ventas", f"{len(df)}")
+
     if 'Producto' in df.columns:
+        st.subheader("Ventas por Producto")
         st.bar_chart(df.groupby('Producto')['Total'].sum())
