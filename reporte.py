@@ -9,7 +9,7 @@ archivo = archivos[0]
 st.success(f"Archivo cargado: {archivo}")
 
 # Leer Excel - prueba con y sin encabezados
-df = pd.read_excel(archivo)
+df = pd.read_excel(archivo, header=1)
 
 # Si sale Unnamed, quiere decir que no tiene titulos, leemos de otra forma
 if all("Unnamed" in str(c) for c in df.columns):
