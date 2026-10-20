@@ -1,43 +1,44 @@
 import streamlit as st
 import pandas as pd
-
-st.title("Reporte automatico para tienda de artesanias La Guajira")
-
-# Cargar Excel - busca el archivo automaticamente
 import glob
-archivos_excel = glob.glob("*.xlsx")
-if not archivos_excel:
-    st.error("No se encontro archivo Excel")
-    st.stop()
 
-archivo = archivos_excel[0]
+st.title("Reporte automatico para artesanias La Guajira")
+
+archivos = glob.glob("*.xlsx")
+archivo = archivos[0]
+st.success(f"Archivo cargado: {archivo}")
+
+# Leer Excel - prueba con y sin encabezados
 df = pd.read_excel(archivo)
 
-st.success(f"Archivo cargado: {archivo}")
+# Si sale Unnamed, quiere decir que no tiene titulos, leemos de otra forma
+if all("Unnamed" in str(c) for c in df.columns):
+    df_temp = pd.read_excel(archivo, header=None)
+    # Busca la primera fila que tenga texto
+    for i in range(min(5, len(df_temp))):
+        fila = df_temp.iloc[i].dropna()
+        if len(fila) >= 2:
+            df = pd.read_excel(archivo, header=i)
+            break
+    # Si sigue sin titulos, le ponemos nosotros
+    if all("Unnamed" in str(c) for c in df.columns):
+        df = pd.read_excel(archivo, header=None)
+        df.columns = [f"Columna_{j+1}" for j in range(len(df.columns))]
+
 st.write("Columnas encontradas:", list(df.columns))
-st.dataframe(df.head())
+st.dataframe(df.head(10))
 
-# Detectar columna de total / precio / valor automaticamente
-col_total = None
-for c in df.columns:
-    nombre = c.lower()
-    if 'total' in nombre or 'valor' in nombre or 'precio' in nombre or 'venta' in nombre or 'monto' in nombre:
-        col_total = c
-        break
-
-# Si no encuentra, usa la primera columna numerica
-if col_total is None:
-    numericas = df.select_dtypes(include='number').columns
-    if len(numericas) > 0:
-        col_total = numericas[0]
-
-col1, col2 = st.columns(2)
-if col_total:
+# Buscar columna numerica para total
+col_num = df.select_dtypes(include='number').columns
+if len(col_num) > 0:
+    col_total = col_num[-1]  # ultima columna numerica suele ser el total
     total = df[col_total].sum()
-    col1.metric("Ventas Totales", f"${total:,.0f} COP")
+    c1, c2 = st.columns(2)
+    c1.metric("Ventas Totales", f"${total:,.0f} COP")
+    c2.metric("Numero de ventas", f"{len(df)}")
+    st.bar_chart(df[col_total])
 else:
-    col1.metric("Total registros", f"{len(df)}")
+    st.warning("Tu Excel no tiene numeros, solo texto")
+    st.write(df)
 
-col2.metric("Numero de ventas", f"{len(df)}")
-
-st.bar_chart(df[col_total] if col_total else df.iloc[:,0])
+st.info("Tip: Para que se vea bonito, en tu Excel pon en la primera fila: Producto, Cantidad, Precio, Total")
