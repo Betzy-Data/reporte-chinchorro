@@ -2,33 +2,32 @@ import streamlit as st
 import pandas as pd
 import glob
 
-st.title("Reporte Artesanias La Guajira")
+st.title("Reporte Artesanias La Guajira - VERSION FINAL")
+st.warning("Si ves este letrero amarillo, el codigo nuevo SI se cargo")
 
 archivo = glob.glob("*.xlsx")[0]
-st.success(f"Archivo cargado: {archivo}")
+st.success(f"Archivo: {archivo}")
 
-# Leemos todo sin encabezado
-df_temp = pd.read_excel(archivo, header=None)
-df_temp = df_temp.dropna(how='all')
+# Leemos sin titulo
+df_raw = pd.read_excel(archivo, header=None)
+df_raw = df_raw.dropna(how='all', axis=0)
 
-# La primera fila que tiene "Fecha" es el titulo
-# La ponemos como columnas
-df_temp.columns = df_temp.iloc[0]
-df = df_temp[1:].reset_index(drop=True)
+st.write("Fila 0 original:", df_raw.iloc[0].tolist())
 
-# Limpiar
+# Si la fila 0 tiene la palabra Fecha, usala como titulo
+if "Fecha" in str(df_raw.iloc[0].tolist()):
+    df_raw.columns = df_raw.iloc[0]
+    df = df_raw[1:].reset_index(drop=True)
+else:
+    df = pd.read_excel(archivo)
+
 df = df.dropna(how='all')
-st.write("Columnas encontradas:")
-st.write(list(df.columns))
-st.dataframe(df)
+st.write("Columnas finales:", list(df.columns))
+st.dataframe(df.head(10))
 
-# Ahora si calcula totales
 if 'Total' in df.columns:
     df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
-    c1, c2 = st.columns(2)
-    c1.metric("Ventas Totales", f"${df['Total'].sum():,.0f} COP")
-    c2.metric("Ventas", f"{len(df)}")
-
+    st.metric("Ventas Totales", f"${df['Total'].sum():,.0f} COP")
+    st.metric("Numero de ventas", len(df))
     if 'Producto' in df.columns:
-        st.subheader("Ventas por Producto")
         st.bar_chart(df.groupby('Producto')['Total'].sum())
