@@ -21,7 +21,7 @@ df = df_raw.iloc[fila_header + 1:].reset_index(drop=True)
 df = df.dropna(how='all')
 
 # Limpiar tipos
-df['Fecha'] = pd.to_datetime(df['Fecha'])
+df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce', dayfirst=True)
 df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
 df['Cantidad'] = pd.to_numeric(df['Cantidad'], errors='coerce')
 
