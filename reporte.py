@@ -4,8 +4,8 @@ import pandas as pd
 import glob
 
 st.set_page_config(page_title="Artesanias La Guajira", layout="wide")
-st.title("🧶("Tienda La Guajira - ¿Qué se vendió hoy?")
-st.write("Sube tu Excel de ventas y te digo qué pedir y cuánto ganaste")
+st.title("🧶Tienda La Guajira - Que se vendio hoy?")
+st.write("Sube tu Excel de ventas y te digo que pedir y cuanto ganaste")
 archivo = glob.glob("*.xlsx")[0]
 df_raw = pd.read_excel(archivo, header=None)
 
