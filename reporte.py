@@ -22,6 +22,8 @@ df = df.dropna(how='all')
 
 # Limpiar tipos
 df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce', dayfirst=True)
+df['Fecha'] = df['Fecha'].dt.strftime('%d/%m/%Y')
+
 df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
 df['Cantidad'] = pd.to_numeric(df['Cantidad'], errors='coerce')
 
