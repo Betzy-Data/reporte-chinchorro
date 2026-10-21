@@ -46,8 +46,18 @@ c3.metric("Ticket Promedio", f"${df_f['Total'].mean():,.0f} COP")
 st.subheader("Detalle de ventas")
 st.dataframe(df_f, use_container_width=True)
 
-st.subheader("Ventas por producto")
-st.bar_chart(df_f.groupby('Producto')['Total'].sum())
+# Grafico con colores Wayuu
+import altair as alt
+st.subheader("Ventas con colores Wayuu")
 
-st.subheader("Ventas por ciudad")
-st.bar_chart(df_f.groupby('Ciudad')['Total'].sum())
+ventas_producto = df_f.groupby('Producto')['Total'].sum().reset_index()
+
+grafico = alt.Chart(ventas_producto).mark_bar().encode(
+    x='Producto',
+    y='Total',
+    color=alt.Color('Producto', scale=alt.Scale(range=['#FFC300', '#C70039', '#581845', '#FF5733', '#DAF7A6'])),
+    tooltip=['Producto', 'Total']
+).properties(height=400)
+
+st.altair_chart(grafico, use_container_width=True)
+
