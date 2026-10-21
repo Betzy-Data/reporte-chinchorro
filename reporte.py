@@ -34,7 +34,11 @@ st.success(f"Lo que mas se vende es: {top_producto} - Pide mas de esto!")
 # Filtros
 st.sidebar.header("Filtros")
 producto_filtro = st.sidebar.multiselect("Producto", df['Producto'].unique(), default=df['Producto'].unique())
+df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+rango_fechas = st.sidebar.date_input("Rango de fechas", [df['Fecha'].min(), df['Fecha'].max()])
 df_f = df[df['Producto'].isin(producto_filtro)]
+if len(rango_fechas) == 2:
+    df_f = df_f[(df_f['Fecha'] >= pd.to_datetime(rango_fechas[0])) & (df_f['Fecha'] <= pd.to_datetime(rango_fechas[1]))]
 
 # Metricas
 c1, c2, c3 = st.columns(3)
