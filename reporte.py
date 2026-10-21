@@ -27,6 +27,10 @@ df['Fecha'] = df['Fecha'].dt.strftime('%d/%m/%Y')
 df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
 df['Cantidad'] = pd.to_numeric(df['Cantidad'], errors='coerce')
 
+# Producto estrella
+top_producto = df['Producto'].mode()[0]
+st.success(f"Lo que mas se vende es: {top_producto} - Pide mas de esto!")
+
 # Filtros
 st.sidebar.header("Filtros")
 producto_filtro = st.sidebar.multiselect("Producto", df['Producto'].unique(), default=df['Producto'].unique())
