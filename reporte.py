@@ -87,6 +87,19 @@ for prod, stock in stock_actual.items():
     else:
         st.write(f"✅ De {prod} estas bien, no pidas")
 
+# Crear lista para la artesana
+pedidos = []
+for prod, stock in stock_actual.items():
+    if stock < stock_objetivo:
+        pedir = stock_objetivo - stock
+        pedidos.append({"Producto": prod, "Te quedan": stock, "Pide": pedir})
+
+if pedidos:
+    df_pedidos = pd.DataFrame(pedidos)
+    st.write(df_pedidos)
+    st.download_button("📥 Descargar pedido para la artesana", df_pedidos.to_csv(index=False).encode('utf-8'), "pedido.csv", "text/csv")
+else:
+    st.write("🎉 ¡Hoy no tienes que pedir nada, estas full!")
 # Filtros
 st.sidebar.header("Filtros")
 producto_filtro = st.sidebar.multiselect("Producto", df['Producto'].unique(), default=df['Producto'].unique())
