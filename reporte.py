@@ -61,6 +61,21 @@ st.write(f"Tu mejor mes fue {ganancia_mes.idxmax()} con ${ganancia_mes.max():,.0
 # Producto estrella
 top_producto = df['Producto'].mode()[0]
 st.success(f"Lo que mas se vende es: {top_producto} - Pide mas de esto!")
+st.divider()
+st.subheader("🚨 Alerta de Inventario")
+
+# Cuenta cuántos te quedan por producto (simulamos que tenías 50 de cada uno al inicio)
+stock_inicial = 50
+ventas_por_producto = df['Producto'].value_counts()
+stock_actual = stock_inicial - ventas_por_producto
+
+for prod, stock in stock_actual.items():
+    if stock < 10:
+        st.error(f"⚠️ Te quedan solo {stock} de {prod} - ¡Pide ya a la artesana!")
+    elif stock < 20:
+        st.warning(f"Quedan {stock} de {prod} - Ve pidiendo")
+
+st.write(stock_actual)
 
 # Filtros
 st.sidebar.header("Filtros")
