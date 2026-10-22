@@ -49,6 +49,15 @@ col1.metric("💰 Vendido", f"${total_vendido:,.0f}")
 col2.metric("🧶 A artesanas", f"${total_costo:,.0f}")
 col3.metric("✨ TU GANANCIA", f"${total_ganancia:,.0f}")
 
+st.divider()
+st.subheader("📈 Tu ganancia por mes")
+
+df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+df['Mes'] = df['Fecha'].dt.strftime('%Y-%m')
+ganancia_mes = df.groupby('Mes')['Ganancia'].sum()
+
+st.bar_chart(ganancia_mes)
+st.write(f"Tu mejor mes fue {ganancia_mes.idxmax()} con ${ganancia_mes.max():,.0f}")
 # Producto estrella
 top_producto = df['Producto'].mode()[0]
 st.success(f"Lo que mas se vende es: {top_producto} - Pide mas de esto!")
@@ -56,7 +65,7 @@ st.success(f"Lo que mas se vende es: {top_producto} - Pide mas de esto!")
 # Filtros
 st.sidebar.header("Filtros")
 producto_filtro = st.sidebar.multiselect("Producto", df['Producto'].unique(), default=df['Producto'].unique())
-df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+
 fechas_validas = df['Fecha'].dropna()
 if not fechas_validas.empty:
     rango_fechas = st.sidebar.date_input("Rango de fechas", [fechas_validas.min().date(), fechas_validas.max().date()])
