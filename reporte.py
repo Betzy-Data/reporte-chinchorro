@@ -78,8 +78,14 @@ for prod, stock in stock_actual.items():
         st.success(f"✅ {prod}: te quedan {stock} - Vas bien")
 
 st.write("---")
-
-st.write(stock_actual)
+st.write("### 🛒 Que debes pedir hoy:")
+stock_objetivo = 50
+for prod, stock in stock_actual.items():
+    if stock < stock_objetivo:
+        pedir = stock_objetivo - stock
+        st.write(f"👉 Pide {pedir} de {prod} a la artesana")
+    else:
+        st.write(f"✅ De {prod} estas bien, no pidas")
 
 # Filtros
 st.sidebar.header("Filtros")
