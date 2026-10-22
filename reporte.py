@@ -71,9 +71,13 @@ stock_actual = stock_inicial - ventas_por_producto
 
 for prod, stock in stock_actual.items():
     if stock < 10:
-        st.error(f"⚠️ Te quedan solo {stock} de {prod} - ¡Pide ya a la artesana!")
+        st.error(f"🚨 Te quedan solo {stock} de {prod} - ¡Pide ya a la artesana!")
     elif stock < 20:
-        st.warning(f"Quedan {stock} de {prod} - Ve pidiendo")
+        st.warning(f"⚠️ Quedan {stock} de {prod} - Ve pidiendo")
+    else:
+        st.success(f"✅ {prod}: te quedan {stock} - Vas bien")
+
+st.write("---")
 
 st.write(stock_actual)
 
