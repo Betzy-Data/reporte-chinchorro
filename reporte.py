@@ -69,3 +69,23 @@ grafico = alt.Chart(ventas_producto).mark_bar().encode(
 
 st.altair_chart(grafico, use_container_width=True)
 
+# CLASE 5 - MAPA LA GUAJIRA
+st.subheader("🗺️ De dónde nos compran")
+
+# Coordenadas de La Guajira
+ciudades_coords = {
+    "Riohacha": [11.544, -72.907],
+    "Maicao": [11.379, -72.241],
+    "Manaure": [11.779, -72.445],
+    "Uribia": [11.714, -72.266],
+    "Albania": [11.161, -72.583],
+    "Fonseca": [10.888, -72.854]
+}
+
+# Agrupamos tus ventas por ciudad
+mapa_data = df.groupby("Ciudad").size().reset_index(name="Pedidos")
+mapa_data["lat"] = mapa_data["Ciudad"].map(lambda x: ciudades_coords.get(x, [11.5, -72.9])[0])
+mapa_data["lon"] = mapa_data["Ciudad"].map(lambda x: ciudades_coords.get(x, [11.5, -72.9])[1])
+
+st.map(mapa_data, latitude="lat", longitude="lon", size="Pedidos", color="#FF5722")
+st.caption("Mientras más grande el punto, más pedidos de esa ciudad")
