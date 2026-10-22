@@ -69,23 +69,39 @@ grafico = alt.Chart(ventas_producto).mark_bar().encode(
 
 st.altair_chart(grafico, use_container_width=True)
 
-# CLASE 5 - MAPA LA GUAJIRA
+# CLASE 5 MEJORADA - PUNTOS GRANDES Y COLORES WAYUU
+import pydeck as pdk
+
 st.subheader("🗺️ De dónde nos compran")
 
-# Coordenadas de La Guajira
 ciudades_coords = {
     "Riohacha": [11.544, -72.907],
     "Maicao": [11.379, -72.241],
     "Manaure": [11.779, -72.445],
     "Uribia": [11.714, -72.266],
     "Albania": [11.161, -72.583],
-    "Fonseca": [10.888, -72.854]
+    "Mayapo": [11.70, -72.9],
+    "El Pajaro": [11.65, -72.7],
+    "Musichi": [11.75, -72.4]
 }
 
-# Agrupamos tus ventas por ciudad
 mapa_data = df.groupby("Ciudad").size().reset_index(name="Pedidos")
 mapa_data["lat"] = mapa_data["Ciudad"].map(lambda x: ciudades_coords.get(x, [11.5, -72.9])[0])
 mapa_data["lon"] = mapa_data["Ciudad"].map(lambda x: ciudades_coords.get(x, [11.5, -72.9])[1])
 
-st.map(mapa_data, latitude="lat", longitude="lon", size="Pedidos", color="#FF5722")
-st.caption("Mientras más grande el punto, más pedidos de esa ciudad")
+# Puntos más grandes y color Wayuu rojo/amarillo
+mapa_data["size"] = mapa_data["Pedidos"] * 1000  # Más grande
+
+layer = pdk.Layer(
+    "ScatterplotLayer",
+    mapa_data,
+    get_position='[lon, lat]',
+    get_radius="size",
+    get_color='[255, 87, 34, 200]',  # Naranja Wayuu
+    pickable=True
+)
+
+view = pdk.ViewState(latitude=11.5, longitude=-72.6, zoom=7.5)
+
+st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view, tooltip={"text": "{Ciudad}: {Pedidos} pedidos"}))
+st.caption("Mientras más grande el punto, más pedidos de esa ciudad - Toca el punto para ver")
