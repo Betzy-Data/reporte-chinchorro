@@ -27,6 +27,28 @@ df['Fecha'] = df['Fecha'].dt.strftime('%d/%m/%Y')
 df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
 df['Cantidad'] = pd.to_numeric(df['Cantidad'], errors='coerce')
 
+# CLASE 6 - GANANCIAS REALES
+costos_artesana = {
+    "Chinchorro": 180000,
+    "Mochila Wayuu": 80000,
+    "Manilla": 15000,
+    "Sombrero": 45000,
+    "Bolso": 60000,
+    "Chinchorros": 180000,
+    "Mochilas": 80000
+}
+df['Costo'] = df['Producto'].map(costos_artesana).fillna(50000)
+df['Ganancia'] = df['Total'] - df['Costo']
+
+total_vendido = df['Total'].sum()
+total_ganancia = df['Ganancia'].sum()
+total_costo = df['Costo'].sum()
+
+col1, col2, col3 = st.columns(3)
+col1.metric("💰 Vendido", f"${total_vendido:,.0f}")
+col2.metric("🧶 A artesanas", f"${total_costo:,.0f}")
+col3.metric("✨ TU GANANCIA", f"${total_ganancia:,.0f}")
+
 # Producto estrella
 top_producto = df['Producto'].mode()[0]
 st.success(f"Lo que mas se vende es: {top_producto} - Pide mas de esto!")
