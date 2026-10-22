@@ -65,7 +65,7 @@ st.divider()
 st.subheader("🚨 Alerta de Inventario")
 
 # Cuenta cuántos te quedan por producto (simulamos que tenías 50 de cada uno al inicio)
-stock_inicial = 50
+stock_inicial = 68
 ventas_por_producto = df['Producto'].value_counts()
 stock_actual = stock_inicial - ventas_por_producto
 
