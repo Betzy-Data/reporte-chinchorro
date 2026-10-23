@@ -2,131 +2,178 @@ import streamlit as st
 import pandas as pd
 import glob
 import urllib.parse
-from datetime import date
 
-st.set_page_config(page_title="Tienda La Guajira", layout="wide", page_icon="🧶")
+st.set_page_config(page_title="Artesanias La Guajira", layout="wide")
+st.title("Tienda La Guajira - Que se vendio hoy?")
+st.write("Sube tu Excel de ventas y te digo que pedir y cuanto ganar")
 
-# NUMERO DE BETZY - YA CONFIGURADO
+# NUMERO BETZY - NUEVO
 NUMERO_BETZY = "573003508492"
 
-st.title("🧶 Tienda La Guajira - Que se vendio hoy?")
-st.markdown("Sube tu Excel de ventas y te digo que pedir y cuanto ganaste")
+archivo = glob.glob("*.xlsx")[0]
+df_raw = pd.read_excel(archivo, header=None)
 
-# --- LEER TU EXCEL ORIGINAL ---
-archivos = glob.glob("*.xlsx")
-if not archivos:
-    st.error("Súbeme tu Excel a GitHub")
-    st.stop()
-
-df_raw = pd.read_excel(archivos[0], header=None)
-
-# Buscar donde empieza tu tabla
-fila = 0
-for i in range(25):
-    txt = " ".join([str(x) for x in df_raw.iloc[i].tolist()])
-    if "Fecha" in txt or "Producto" in txt:
-        fila = i
+fila_header = 0
+for i in range(20):
+    texto = " ".join(str(x) for x in df_raw.iloc[i].tolist() if str(x) != 'nan')
+    if "Fecha" in texto or "Producto" in texto:
+        fila_header = i
         break
 
-df_raw.columns = df_raw.iloc[fila]
-df = df_raw.iloc[fila+1:].copy()
+df_raw.columns = df_raw.iloc[fila_header]
+df = df_raw.iloc[fila_header + 1:].reset_index(drop=True)
 df = df.dropna(how="all")
-df.columns = [str(c).strip() for c in df.columns]
-df = df[~df["Fecha"].astype(str).str.contains("Fecha", na=False)]
 
-# Convertir numeros
-for c in ["Total", "Cantidad"]:
-    if c in df.columns:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+# Limpiar tipos
 df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
-if "Cantidad" not in df.columns:
-    df["Cantidad"] = 1
-df["Producto"] = df["Producto"].astype(str)
+df["Total"] = pd.to_numeric(df["Total"], errors="coerce")
+df["Cantidad"] = pd.to_numeric(df["Cantidad"], errors="coerce")
 
-# Costos Wayuu
-costos = {"Chinchorro":120000, "Chinchorros":120000, "Mochila Wayuu":80000, "Mochila":80000, "Manilla artesanal":15000, "Manilla":15000, "Hamaca":60000, "Bolso cuero":90000, "Bolso":60000, "Sombrero Vueltiao":45000}
-df["Costo"] = df["Producto"].map(costos).fillna(70000) * df["Cantidad"].fillna(1)
+# CLASE 6 - GANANCIAS REALES
+costos_artesana = {
+    "Chinchorro": 180000,
+    "Mochila Wayuu": 80000,
+    "Manilla": 15000,
+    "Sombrero": 45000,
+    "Bolso": 60000,
+    "Chinchorros": 180000,
+    "Mochilas": 80000
+}
+
+df["Costo"] = df["Producto"].map(costos_artesana).fillna(50000)
 df["Ganancia"] = df["Total"] - df["Costo"]
 
-# --- TUS 3 CAJITAS DE SIEMPRE ---
-vendido = df["Total"].sum()
-a_artesanas = df["Costo"].sum()
-tu_ganancia = df["Ganancia"].sum()
+total_vendido = df["Total"].sum()
+total_costo = df["Costo"].sum()
+total_ganancia = df["Ganancia"].sum()
 
 col1, col2, col3 = st.columns(3)
-col1.metric("💰 VENDIDO", f"${vendido:,.0f}")
-col2.metric("🧶 A ARTESANAS", f"${a_artesanas:,.0f}")
-col3.metric("✨ TU GANANCIA", f"${tu_ganancia:,.0f}", delta=f"{len(df)} pedidos")
+col1.metric("TU VENDIDO", f"${total_vendido:,.0f}")
+col2.metric("TU COSTO", f"${total_costo:,.0f}")
+col3.metric("TU GANANCIA", f"${total_ganancia:,.0f}")
 
-# Lo que mas se vende
-mas_vendido = df["Producto"].mode()[0]
-st.success(f"✅ Lo que mas se vende es: **{mas_vendido}** - ¡Pide mas de esto!")
-
-# --- VENTAS TOTALES, PEDIDOS, TICKET ---
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.markdown("**Ventas Totales**")
-    st.header(f"${vendido:,.0f} COP")
-with c2:
-    st.markdown("**Total Pedidos**")
-    st.header(f"{len(df)}")
-with c3:
-    st.markdown("**Ticket Promedio**")
-    st.header(f"${vendido/len(df):,.0f} COP" if len(df)>0 else "$0")
-
-# --- DETALLE DE VENTAS ---
-st.subheader("📋 Detalle de ventas")
-st.dataframe(df[["Fecha","Factura","Producto","Cantidad","Total"]].tail(30) if "Factura" in df.columns else df.tail(30), use_container_width=True)
-
-# --- TU GANANCIA POR MES (tu grafico original) ---
-st.subheader("📈 Tu ganancia por mes")
+st.divider()
+st.subheader("Tu ganancia por mes")
 df["Mes"] = df["Fecha"].dt.strftime("%Y-%m")
 ganancia_mes = df.groupby("Mes")["Ganancia"].sum()
-st.bar_chart(ganancia_mes, color="#E91E63")
-if not ganancia_mes.empty:
-    mejor_mes = ganancia_mes.idxmax()
-    st.caption(f"Tu mejor mes fue {mejor_mes} con ${ganancia_mes.max():,.0f}")
+st.bar_chart(ganancia_mes)
 
-# --- VENTAS CON COLORES WAYUU + MAPA ---
-col_a, col_b = st.columns(2)
-with col_a:
-    st.subheader("🎨 Ventas con colores Wayuu")
-    ventas_prod = df.groupby("Producto")["Total"].sum()
-    st.bar_chart(ventas_prod, color="#FF5722")
+top_producto = df["Producto"].mode()[0]
+st.success(f"Lo que mas se vende es: {top_producto} - Pide mas de esto!")
 
-with col_b:
-    st.subheader("🗺️ Mapa: Riohacha, Uribia, Maicao")
-    # Mapa simple de La Guajira
-    mapa_data = pd.DataFrame({
-        "lat": [11.5444, 11.714, 11.3777],
-        "lon": [-72.9072, -72.266, -72.238],
-        "lugar": ["Riohacha", "Uribia", "Maicao"],
-        "ventas": [len(df)*0.5, len(df)*0.3, len(df)*0.2]
-    })
-    st.map(mapa_data, size="ventas", color="#E91E63")
-
-# --- ALERTA INVENTARIO + WHATSAPP NUEVO (lo unico nuevo) ---
 st.divider()
-st.subheader("🚨 Alerta de Inventario")
-stock_inicial = 50
-ventas_por_prod = df.groupby("Producto")["Cantidad"].sum()
+st.subheader("Alerta de Inventario")
 
-for prod in ["Chinchorro","Mochila Wayuu","Manilla artesanal","Hamaca","Bolso cuero","Sombrero Vueltiao","Chinchorros","Mochila","Manilla"]:
-    if prod not in ventas_por_prod.index:
-        continue
-    quedan = stock_inicial - ventas_por_prod[prod]
-    if quedan < 0:
-        quedan = 0
-    
-    if quedan < 10:
-        st.error(f"🔴 {prod}: te quedan {quedan:.0f} - ¡Pide YA!")
-        texto = f"Hola! Soy Betzy de Tienda La Guajira 3003508492. Me quedan solo {quedan:.0f} de {prod}. Necesito mas por favor. Mi ganancia va en ${tu_ganancia:,.0f}"
-        link = f"https://wa.me/{NUMERO_BETZY}?text={urllib.parse.quote(texto)}"
-        st.link_button(f"📲 Pedir {prod} por WhatsApp a mi misma (probar)", link, use_container_width=True)
-    elif quedan < 20:
-        st.warning(f"🟡 {prod}: te quedan {quedan:.0f}")
+# Cuenta cuantos te quedan por producto
+stock_inicial = 68
+ventas_por_producto = df["Producto"].value_counts()
+stock_actual = stock_inicial - ventas_por_producto
+
+for prod, stock in stock_actual.items():
+    if stock < 10:
+        st.error(f"Te quedan solo {stock} de {prod} - Pide ya a la artesana!")
+        # NUEVO BOTON WHATSAPP
+        msg = f"Hola soy Betzy 3003508492 de Tienda La Guajira. Me quedan solo {stock} de {prod}. Necesito mas por favor. Mi ganancia es ${total_ganancia:,.0f}"
+        link = f"https://wa.me/{NUMERO_BETZY}?text={urllib.parse.quote(msg)}"
+        st.link_button(f"📲 Pedir {prod} por WhatsApp - {NUMERO_BETZY}", link)
+    elif stock < 20:
+        st.warning(f"Quedan {stock} de {prod} - Ve pidiendo")
     else:
-        st.success(f"🟢 {prod}: te quedan {quedan:.0f} - Vas bien")
+        st.success(f"{prod}: te quedan {stock} - Vas bien")
 
-st.divider()
-st.caption(f"WhatsApp configurado: +57 {NUMERO_BETZY} | Hecho con ❤️ en Riohacha")
+st.write("---")
+st.write("## Que debes pedir hoy:")
+
+stock_objetivo = 50
+for prod, stock in stock_actual.items():
+    if stock < stock_objetivo:
+        pedir = stock_objetivo - stock
+        st.write(f"Pide {pedir} de {prod} a la artesana")
+
+# Crear lista para la artesana
+pedidos = []
+for prod, stock in stock_actual.items():
+    if stock < stock_objetivo:
+        pedir = stock_objetivo - stock
+        pedidos.append({"Producto": prod, "Te quedan": stock, "Pide": pedir})
+
+if pedidos:
+    df_pedidos = pd.DataFrame(pedidos)
+    st.dataframe(df_pedidos)
+    st.download_button("Descargar pedido para la artesana", df_pedidos.to_csv(index=False), "pedidos_artesana.csv", "text/csv")
+else:
+    st.write("Hoy no tienes que pedir nada, estas full!")
+
+# Filtros
+st.sidebar.header("Filtros")
+producto_filtro = st.sidebar.multiselect("Producto", df["Producto"].unique(), default=df["Producto"].unique())
+fechas_validas = df["Fecha"].dropna()
+if not fechas_validas.empty:
+    rango_fechas = st.sidebar.date_input("Rango de fechas", [fechas_validas.min(), fechas_validas.max()])
+    if len(rango_fechas) == 2:
+        df_filtrado = df[(df["Fecha"] >= pd.to_datetime(rango_fechas[0])) & (df["Fecha"] <= pd.to_datetime(rango_fechas[1]))]
+        df_filtrado = df_filtrado[df_filtrado["Producto"].isin(producto_filtro)]
+    else:
+        df_filtrado = df[df["Producto"].isin(producto_filtro)]
+else:
+    df_filtrado = df[df["Producto"].isin(producto_filtro)]
+
+# Métricas
+c1, c2, c3 = st.columns(3)
+c1.metric("Ventas Totales", f"${df_filtrado['Total'].sum():,.0f} COP")
+c2.metric("Total Pedidos", len(df_filtrado))
+c3.metric("Ticket Promedio", f"${df_filtrado['Total'].mean():,.0f} COP")
+
+# Tablas y graficos
+st.subheader("Detalle de ventas")
+st.dataframe(df_filtrado, use_container_width=True)
+
+st.subheader("Ventas con colores Wayuu")
+import altair as alt
+ventas_producto = df_filtrado.groupby("Producto")["Total"].sum().reset_index()
+grafico = alt.Chart(ventas_producto).mark_bar().encode(
+    x="Producto",
+    y="Total",
+    color=alt.Color("Producto", scale=alt.Scale(range=["#FFC300", "#C70039", "#581845", "#FF5733", "#DAF7A6"])),
+    tooltip=["Producto", "Total"]
+).properties(height=400)
+st.altair_chart(grafico, use_container_width=True)
+
+# CLASE 8 MEJORADA - PUNTOS GRANDES Y COLORES WAYUU
+import pydeck as pdk
+st.subheader("De donde nos compran")
+
+ciudades_coords = {
+    "Riohacha": [11.544, -72.907],
+    "Maicao": [11.379, -72.241],
+    "Manaure": [11.779, -72.445],
+    "Uribia": [11.714, -72.268],
+    "Albania": [11.161, -72.583],
+    "Barrancas": [11.0, -72.91],
+    "El Pájaro": [11.70, -72.73],
+    "Mayapo": [11.65, -72.91],
+    "Musichi": [11.75, -72.4]
+}
+
+if "Ciudad" in df.columns:
+    mapa_data = df.groupby("Ciudad").size().reset_index(name="Pedidos")
+else:
+    # Si no tienes columna Ciudad, usa Riohacha por defecto
+    mapa_data = pd.DataFrame([{"Ciudad": "Riohacha", "Pedidos": len(df)}])
+
+mapa_data["lon"] = mapa_data["Ciudad"].map(lambda x: ciudades_coords.get(x, [11.5, -72.9])[1])
+mapa_data["lat"] = mapa_data["Ciudad"].map(lambda x: ciudades_coords.get(x, [11.5, -72.9])[0])
+mapa_data["size"] = mapa_data["Pedidos"] * 1000
+
+layer = pdk.Layer(
+    "ScatterplotLayer",
+    mapa_data,
+    get_position="[lon, lat]",
+    get_color="[255, 87, 34, 200]",
+    get_radius="size",
+    pickable=True
+)
+
+view = pdk.ViewState(latitude=11.5, longitude=-72.6, zoom=7.5)
+st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view, tooltip={"text": "{Ciudad}: {Pedidos} pedidos"}))
+st.caption("Mientras mas grande el punto, mas pedidos de esa ciudad - Toca el punto para ver")
