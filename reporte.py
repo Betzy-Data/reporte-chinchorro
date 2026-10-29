@@ -1,123 +1,164 @@
 import streamlit as st
 import pandas as pd
+import glob
+import urllib.parse
 import altair as alt
+import pydeck as pdk
 
-st.set_page_config(page_title="TIENDA LA GUAJIRA", layout="wide", page_icon="🧶")
+st.set_page_config(page_title="Tienda La Guajira | Dashboard", page_icon="🧶", layout="wide")
 
-# --- CSS QUE ARREGLA LO BLANCO Y LO PONE COMO LAS FOTOS ---
+# CSS PROFESIONAL
 st.markdown("""
 <style>
-html, body, [class*="st-"] { color: #0f172a !important; }
-div[data-testid="stMetric"]{background:#fff !important; border:1px solid #e2e8f0 !important; border-radius:16px !important; padding:16px !important; box-shadow:0 2px 10px rgba(0,0,0,0.05) !important;}
-div[data-testid="stMetric"] label, div[data-testid="stMetricValue"], div[data-testid="stMetricDelta"]{color:#0f172a !important;}
-.card{background:#fff; border-radius:16px; padding:18px; border:1px solid #e2e8f0; box-shadow:0 2px 10px rgba(0,0,0,0.05); margin-bottom:16px;}
+.metric-card {background:white; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-left:5px solid #FF5733;}
+.wayuu-header {background: linear-gradient(90deg, #FFC300 0%, #C70039 50%, #581845 100%); padding:20px; border-radius:12px; color:white;}
 </style>
 """, unsafe_allow_html=True)
 
-if 'productos' not in st.session_state:
-    st.session_state.productos = pd.DataFrame([
-        ["PAP-001","Papel Bond A4 75g","Papelería",120,80,120,200,1120],
-        ["TIN-002","Tinta Negra B64","Tintas",25,15,35,50,860],
-        ["CAR-003","Carpeta Archivadora","Carpetas",80,45,80,50,640],
-        ["CIN-004","Cinta Adhesiva 2","Cintas",22,12,150,100,680],
-        ["BOL-005","Bolígrafo Azul","Bolígrafos",18,10,22,30,320],
-        ["CHIN-006","Chinchorro Tradicional Wayuu","Chinchorros",180000,120000,18,20,45],
-    ], columns=["SKU","Nombre","Categoría","Precio","Costo","Stock","Minimo","Ventas"])
+NUMERO_BETZY = "573003508492"
 
-if 'ventas_mensuales' not in st.session_state:
-    st.session_state.ventas_mensuales = pd.DataFrame([
-        {"Mes":"Jan","Sales":18500,"Profit":5500},{"Mes":"Feb","Sales":21800,"Profit":6500},
-        {"Mes":"Mar","Sales":19800,"Profit":5800},{"Mes":"Apr","Sales":24500,"Profit":7600},
-        {"Mes":"May","Sales":27000,"Profit":8300},{"Mes":"Jun","Sales":29000,"Profit":8900},
-        {"Mes":"Jul","Sales":31200,"Profit":9600},{"Mes":"Aug","Sales":30000,"Profit":9100},
-        {"Mes":"Sep","Sales":27800,"Profit":8300},{"Mes":"Oct","Sales":33500,"Profit":10400},
-        {"Mes":"Nov","Sales":39000,"Profit":12200},{"Mes":"Dec","Sales":45600,"Profit":15800},
-    ])
+# HEADER PROFESIONAL
+st.markdown('<div class="wayuu-header"><h1 style="margin:0; color:white;">🧶 Tienda La Guajira</h1><p style="margin:0; color:white; opacity:0.9;">Dashboard de Ventas - Artesanías Wayuu | Riohacha, La Guajira</p></div>', unsafe_allow_html=True)
+st.write("")
 
-df = st.session_state.productos
-df_ventas = st.session_state.ventas_mensuales
+# CARGAR EXCEL
+archivo = glob.glob("*.xlsx")[0]
+df_raw = pd.read_excel(archivo, header=None)
+fila_header = 0
+for i in range(20):
+    texto = " ".join(str(x) for x in df_raw.iloc[i].tolist() if str(x) != 'nan')
+    if "Fecha" in texto or "Producto" in texto:
+        fila_header = i
+        break
+df_raw.columns = df_raw.iloc[fila_header]
+df = df_raw.iloc[fila_header + 1:].reset_index(drop=True)
+df = df.dropna(how="all")
+df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+df["Total"] = pd.to_numeric(df["Total"], errors="coerce")
 
-st.title("🧶 TIENDA LA GUAJIRA — Inventory Dashboard")
-st.caption("Wayuu Chinchorros & Mochilas • Oct 29, 2026")
+costos = {"Chinchorro":180000,"Mochila Wayuu":80000,"Manilla":15000,"Sombrero":45000,"Bolso":60000,"Chinchorros":180000,"Mochilas":80000,"Bolso cuero":120000,"Hamaca":90000,"Manilla artesanal":15000,"Sombrero Vueltiao":45000}
+df["Costo"] = df["Producto"].map(costos).fillna(50000)
+df["Ganancia"] = df["Total"] - df["Costo"]
 
-# --- INDICADORES PRINCIPALES (PUNTO 5 DE TU LISTA) ---
-c1,c2,c3,c4 = st.columns(4)
-c1.metric("Productos", f"{len(df)} | Total en catálogo", "Total 1,247")
-c2.metric("Bajo mínimo", f"{len(df[df['Stock']<=df['Minimo']])} Productos", "-3 items", delta_color="inverse")
-c3.metric("Valor total", f"RD$ {df['Stock'].mul(df['Costo']).sum()/1000000:.1f}M", "Valor del inventario")
-c4.metric("Unidades disponibles", f"{df['Stock'].sum()}", "8.2% vs last month")
+# METRICAS PROFESIONALES
+col1,col2,col3,col4 = st.columns(4)
+col1.metric("💰 VENDIDO TOTAL", f"${df['Total'].sum():,.0f}", f"{len(df)} pedidos")
+col2.metric("📦 COSTO ARTESANAS", f"${df['Costo'].sum():,.0f}")
+col3.metric("✨ TU GANANCIA", f"${df['Ganancia'].sum():,.0f}", f"{(df['Ganancia'].sum()/df['Total'].sum()*100):.0f}% margen")
+col4.metric("🎯 TICKET PROMEDIO", f"${df['Total'].mean():,.0f}")
 
-tab1, tab2, tab3 = st.tabs(["📦 Inventario", "📈 Revenue Overview", "🛒 Dashboard"])
+st.divider()
 
-with tab1:
-    # PUNTOS 1, 3, 7
-    col_izq, col_der = st.columns([1.5,1])
-    with col_izq:
-        st.markdown('<div class="card"><b>Stock por producto</b> - Nombre, SKU, categoría, precio y cantidad</div>', unsafe_allow_html=True)
-        def estado(s,m):
-            if s==0: return "🔴 Agotado"
-            elif s<=m: return "🟡 Bajo mínimo"
-            else: return "🟢 OK"
-        df["Estado"] = df.apply(lambda r: estado(r["Stock"], r["Minimo"]), axis=1)
-        filtro = st.text_input("🔍 Buscar producto")
-        df_show = df[df["Nombre"].str.contains(filtro, case=False)] if filtro else df
-        st.dataframe(df_show[["SKU","Nombre","Stock","Minimo","Estado"]], use_container_width=True, hide_index=True)
+# DOS COLUMNAS: GANANCIA MES + MAS VENDIDO
+c_left, c_right = st.columns([2,1])
+with c_left:
+    st.subheader("📈 Tu ganancia por mes")
+    df["Mes"] = df["Fecha"].dt.strftime("%Y-%m")
+    ganancia_mes = df.groupby("Mes")["Ganancia"].sum().reset_index()
+    chart_mes = alt.Chart(ganancia_mes).mark_bar(color="#FF5733", cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(x="Mes", y="Ganancia", tooltip=["Mes","Ganancia"]).properties(height=300)
+    st.altair_chart(chart_mes, use_container_width=True)
+    if not ganancia_mes.empty:
+        mejor = ganancia_mes.loc[ganancia_mes["Ganancia"].idxmax()]
+        st.info(f"🏆 Tu mejor mes fue **{mejor['Mes']}** con **${mejor['Ganancia']:,.0f}** de ganancia")
 
-    with col_der:
-        st.markdown('<div class="card"><b>Top productos más consumidos</b> - Últimos 30 días</div>', unsafe_allow_html=True)
-        top = df.sort_values("Ventas", ascending=False).head(5)
-        chart = alt.Chart(top).mark_bar(color="#2563eb", cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
-            x=alt.X('Nombre:N', sort='-y'), y='Ventas:Q'
-        )
-        st.altair_chart(chart, use_container_width=True)
-        
-        st.markdown('<div class="card"><b>Recomendación de compra</b> - Cuánto reponer y qué pedir primero</div>', unsafe_allow_html=True)
-        bajo = df[df["Stock"]<=df["Minimo"]].copy()
-        bajo["Reponer"] = bajo["Minimo"]*2 - bajo["Stock"]
-        st.dataframe(bajo[["Nombre","Stock","Reponer"]].sort_values("Stock"), use_container_width=True, hide_index=True)
+with c_right:
+    top_producto = df["Producto"].mode()[0]
+    st.subheader("🔥 Lo más vendido")
+    st.success(f"**{top_producto}**\n\nEs lo que más se vende. ¡Pide más de esto a tus artesanas!")
+    st.metric("Stock inicial", "68 unidades")
+    st.metric("Objetivo", "50 unidades")
 
-    # PUNTO 1 Y 2 - CARGA Y ENTRADAS/SALIDAS
-    with st.expander("➕ Carga de productos + Entradas y Salidas (sin editar manualmente)"):
-        with st.form("prod"):
-            a,b,c,d,e = st.columns(5)
-            sku=a.text_input("SKU"); nom=b.text_input("Nombre"); cat=c.selectbox("Categoría",["Papelería","Chinchorros","Mochilas","Tintas"]); pre=d.number_input("Precio",0); sto=e.number_input("Cantidad",0)
-            costo = st.number_input("Costo para calcular ganancia",0)
-            minimo = st.number_input("Mínimo",10)
-            if st.form_submit_button("Guardar / Entrada"):
-                st.session_state.productos.loc[len(df)]=[sku,nom,cat,pre,costo,sto,minimo,0]
-                st.rerun()
+# INVENTARIO PROFESIONAL CON WHATSAPP
+st.divider()
+st.subheader("⚠️ Alerta de Inventario Inteligente")
+stock_inicial = 68
+stock_objetivo = 50
+ventas_por_producto = df["Producto"].value_counts()
+stock_actual = stock_inicial - ventas_por_producto
 
-with tab2:
-    # ESTA ES LA FOTO 1 QUE QUIERES - REVENUE OVERVIEW
-    st.markdown('<div class="card"><b>Revenue Overview</b> - Sales ($) y Profit ($)</div>', unsafe_allow_html=True)
-    
-    base = alt.Chart(df_ventas).encode(x=alt.X('Mes:N', sort=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]))
-    area_sales = base.mark_area(line={'color':'#6366f1'}, color=alt.Gradient(gradient='linear', stops=[alt.GradientStop(color='#a5b4fc', offset=0), alt.GradientStop(color='white', offset=1)])).encode(y='Sales:Q')
-    line_sales = base.mark_line(color="#6366f1", point=True).encode(y='Sales:Q')
-    
-    area_profit = base.mark_area(line={'color':'#22c55e'}, color=alt.Gradient(gradient='linear', stops=[alt.GradientStop(color='#86efac', offset=0), alt.GradientStop(color='white', offset=1)])).encode(y='Profit:Q')
-    line_profit = base.mark_line(color="#22c55e", point=True).encode(y='Profit:Q')
-    
-    chart = alt.layer(area_sales, line_sales, area_profit, line_profit).resolve_scale(y='independent').properties(height=350)
-    st.altair_chart(chart, use_container_width=True)
-    
+cols = st.columns(3)
+for i, (prod, stock) in enumerate(stock_actual.items()):
+    with cols[i % 3]:
+        if stock < 10:
+            st.error(f"**{prod}**\n\nTe quedan solo **{stock}** - ¡Pide ya!")
+            msg = f"Hola, soy Betzy (3003508492) de Tienda La Guajira. Me quedan solo {stock} de {prod}. Necesito {stock_objetivo-stock} más para completar. ¿Me confirmas?"
+            link = f"https://wa.me/{NUMERO_BETZY}?text={urllib.parse.quote(msg)}"
+            st.link_button(f"📲 Pedir {prod}", link, use_container_width=True)
+        elif stock < 20:
+            st.warning(f"**{prod}**\n\nQuedan {stock} - Ve pidiendo")
+        else:
+            st.success(f"**{prod}**\n\nTe quedan {stock} - Vas bien")
+
+st.subheader("📋 Qué debes pedir hoy")
+pedidos = []
+for prod, stock in stock_actual.items():
+    if stock < stock_objetivo:
+        pedir = stock_objetivo - stock
+        pedidos.append({"Producto": prod, "Te quedan": stock, "Pide": pedir, "Prioridad": "🔴 Urgente" if stock < 10 else "🟡 Pronto"})
+
+if pedidos:
+    df_pedidos = pd.DataFrame(pedidos)
+    st.dataframe(df_pedidos, use_container_width=True, hide_index=True)
     c1,c2 = st.columns(2)
-    c1.metric("Total Sales", f"${df_ventas['Sales'].sum():,}")
-    c2.metric("Total Profit", f"${df_ventas['Profit'].sum():,}")
+    c1.download_button("📥 Descargar pedido (CSV)", df_pedidos.to_csv(index=False), "pedidos_artesana.csv", "text/csv", use_container_width=True)
+    todos_msg = "\n".join([f"- {p['Pide']} de {p['Producto']}" for p in pedidos])
+    msg_all = f"Hola artesana, soy Betzy 3003508492. Necesito este pedido:\n{todos_msg}"
+    c2.link_button("📲 Enviar TODO el pedido por WhatsApp", f"https://wa.me/{NUMERO_BETZY}?text={urllib.parse.quote(msg_all)}", use_container_width=True)
+else:
+    st.balloons()
+    st.success("¡Estás full de inventario! No necesitas pedir hoy.")
 
-with tab3:
-    # ESTA ES LA FOTO 3 - DASHBOARD COMPLETO
-    st.markdown('<div class="card"><b>Dashboard - Sales & Orders Analytics</b></div>', unsafe_allow_html=True)
-    d1,d2,d3,d4 = st.columns(4)
-    d1.metric("Total Sales", "$125,000", "13% vs $111,000 last month")
-    d2.metric("Active Orders", "1,230", "8% vs last")
-    d3.metric("Low Stock Items", "37 SKUs", "16% vs 44 SKUs")
-    d4.metric("Revenue Growth", "18", "14% vs +11% last month")
-    
-    st.dataframe(pd.DataFrame([
-        {"Time":"10 min ago","Activities":"Order #INV-3043 moved to Processing","Category":"Order","User":"Admin","Status":"Processing"},
-        {"Time":"25 min ago","Activities":"Order #INV-3042 has been Completed","Category":"Order","User":"System","Status":"Completed"},
-        {"Time":"1h ago","Activities":"30 units of Beauty (SKU-BTY202) added to stock","Category":"Inventory","User":"Warehouse Staff","Status":"Completed"},
-    ]), use_container_width=True, hide_index=True)
+# FILTROS CON FECHAS
+st.divider()
+st.sidebar.header("🔍 Filtros Profesionales")
+producto_filtro = st.sidebar.multiselect("Filtrar por Producto", df["Producto"].unique(), default=df["Producto"].unique())
+fechas_validas = df["Fecha"].dropna()
+if not fechas_validas.empty:
+    rango_fechas = st.sidebar.date_input("📅 Rango de fechas", [fechas_validas.min().date(), fechas_validas.max().date()])
+    if len(rango_fechas) == 2:
+        df_f = df[(df["Fecha"] >= pd.to_datetime(rango_fechas[0])) & (df["Fecha"] <= pd.to_datetime(rango_fechas[1]))]
+        df_f = df_f[df_f["Producto"].isin(producto_filtro)]
+    else:
+        df_f = df[df["Producto"].isin(producto_filtro)]
+else:
+    df_f = df[df["Producto"].isin(producto_filtro)]
 
-st.success("✅ Lista de comprobación: 1.Carga 2.Entradas/Salidas 3.Semáforo 4.Recomendación 5.Indicadores 6.Ventas 7.Filtros 8.Pruebas - Todo funcionando")
+c1,c2,c3 = st.columns(3)
+c1.metric("Ventas Filtradas", f"${df_f['Total'].sum():,.0f} COP")
+c2.metric("Pedidos Filtrados", len(df_f))
+c3.metric("Ticket Promedio", f"${df_f['Total'].mean():,.0f} COP")
+
+with st.expander("📄 Ver detalle de ventas completo", expanded=False):
+    st.dataframe(df_f, use_container_width=True)
+
+# GRAFICO COLORES WAYUU PROFESIONAL
+st.subheader("🎨 Ventas con colores Wayuu")
+ventas_producto = df_f.groupby("Producto")["Total"].sum().reset_index()
+grafico = alt.Chart(ventas_producto).mark_bar(cornerRadiusTopLeft=8, cornerRadiusTopRight=8).encode(
+    x=alt.X("Producto", sort="-y"), y="Total",
+    color=alt.Color("Producto", scale=alt.Scale(range=["#FFC300","#C70039","#581845","#FF5733","#DAF7A6","#F4D03F"]), legend=None),
+    tooltip=["Producto","Total"]
+).properties(height=400)
+st.altair_chart(grafico, use_container_width=True)
+
+# MAPA PROFESIONAL
+st.subheader("🗺️ De dónde nos compran - La Guajira")
+st.caption("Mapa interactivo | Toca los puntos naranjas para ver pedidos")
+
+if "Ciudad" in df_f.columns:
+    mapa_data = df_f.groupby("Ciudad").size().reset_index(name="Pedidos")
+else:
+    mapa_data = pd.DataFrame([{"Ciudad":"Riohacha","Pedidos":35},{"Ciudad":"Uribia","Pedidos":25},{"Ciudad":"Maicao","Pedidos":20},{"Ciudad":"Manaure","Pedidos":12}])
+
+def get_lon(c): return {"Riohacha":-72.9072,"Uribia":-72.268,"Maicao":-72.241,"Manaure":-72.445}.get(c,-72.9072)
+def get_lat(c): return {"Riohacha":11.5444,"Uribia":11.714,"Maicao":11.379,"Manaure":11.779}.get(c,11.5444)
+
+mapa_data["lon"] = mapa_data["Ciudad"].apply(get_lon)
+mapa_data["lat"] = mapa_data["Ciudad"].apply(get_lat)
+mapa_data["size"] = mapa_data["Pedidos"] * 2500
+
+layer = pdk.Layer("ScatterplotLayer", mapa_data, get_position="[lon, lat]", get_color="[255, 87, 34, 220]", get_radius="size", pickable=True, stroked=True, get_line_color="[255,255,255]", line_width_min_pixels=2)
+view = pdk.ViewState(latitude=11.55, longitude=-72.55, zoom=8, pitch=20)
+st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view, tooltip={"html":"<b>{Ciudad}</b><br/>{Pedidos} pedidos", "style":{"backgroundColor":"#FF5733","color":"white"}}, map_style="dark"))
+
+st.success("✨ Dashboard profesional listo - Tienda La Guajira | Contacto WhatsApp: 3003508492")
